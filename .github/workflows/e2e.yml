@@ -20,18 +20,18 @@ jobs:
     name: Playwright (${{ matrix.project }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # oficiálny obraz má prehliadače predinštalované -> netreba ich inštalovať pri každom behu
+    # verzia musí sedieť s @playwright/test v package.json
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
     permissions:
       contents: read
       checks: write # pre súhrn testov
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { project: chromium, browser: chromium }
-          - { project: firefox, browser: firefox }
-          - { project: webkit, browser: webkit }
-          - { project: mobile-chrome, browser: chromium }
-          - { project: mobile-safari, browser: webkit }
+        project: [chromium, firefox, webkit, mobile-chrome, mobile-safari]
 
     steps:
       - uses: actions/checkout@v4
@@ -46,9 +46,6 @@ jobs:
 
       - name: Type check
         run: npm run typecheck
-
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run tests
         run: npx playwright test --project=${{ matrix.project }}

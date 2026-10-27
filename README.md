@@ -33,6 +33,7 @@ npx playwright test --ui   # interaktívny režim
 - **Reklamy** na stránke náhodne prekrývali tlačidlá. Blokujem ich na úrovni siete, aby testy boli stabilné.
 - **Nestabilná demo stránka:** e-shop občas vráti „heavy load“, HTTP 503 alebo Cloudflare 520. Test vtedy zlyhá s hláškou `ENVIRONMENT ISSUE`, takže je hneď vidieť, že nejde o chybu produktu. Neúspešný test sa zopakuje (lokálne 1×, v CI 2×) a report ho označí ako *flaky*. Navigácia nečaká na úplné načítanie obrázkov a skriptov tretích strán (`domcontentloaded`), na prvky čakajú asserty.
 - **Pomalý server pri paralelných testoch:** pri veľa súbežných prehliadačoch demo stránka nestíhala. Obmedzil som počet workerov a pri pridaní do košíka test čaká na odpoveď servera, nie len na zobrazenie okna.
+- **Pomalé CI:** inštalácia prehliadačov (`--with-deps`) trvala pri Firefoxe/WebKite až ~9 min. CI preto beží v oficiálnom Docker obraze Playwright s predinštalovanými prehliadačmi. Verzia `@playwright/test` je zafixovaná, aby sedela s obrazom.
 - **Vyhľadávanie vráti viac produktov:** test vyberá produkt podľa presného názvu, nie prvý výsledok v zozname.
 
 Pri tvorbe som použil AI asistenta (Claude Code). Výsledky som overil spustením testov a kontrolou, že test pri nesprávnych dátach naozaj zlyhá.
