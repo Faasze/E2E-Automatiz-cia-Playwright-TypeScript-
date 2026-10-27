@@ -1,0 +1,103 @@
+name: E2E tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: # ručné spustenie
+  schedule:
+    - cron: '0 6 * * 1-5' # každý pracovný deň ráno
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Playwright (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write # pre súhrn testov
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: chromium, browser: chromium }
+          - { project: firefox, browser: firefox }
+          - { project: webkit, browser: webkit }
+          - { project: mobile-chrome, browser: chromium }
+          - { project: mobile-safari, browser: webkit }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run tests
+        run: npx playwright test --project=${{ matrix.project }}
+
+      - name: Upload HTML report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload traces, screenshots, videos (failures only)
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.project }}
+          path: test-results/
+          retention-days: 7
+
+      - name: Publish test summary
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v1
+        continue-on-error: true
+        with:
+          name: Test results (${{ matrix.project }})
+          path: test-results/junit.xml
+          reporter: java-junit
+
+  # report z chromia na GitHub Pages (Settings -> Pages -> Source: GitHub Actions)
+  publish-report:
+    name: Publish report to GitHub Pages
+    needs: test
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+    continue-on-error: true # ak Pages nie sú zapnuté, nech to nezhodí celý beh
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: playwright-report-chromium
+          path: report
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: report
+      - id: deploy
+        uses: actions/deploy-pages@v4

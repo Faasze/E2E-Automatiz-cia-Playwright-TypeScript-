@@ -1,0 +1,17 @@
+{
+  "cartProducts": [
+    {
+      "id": "men-tshirt",
+      "searchTerm": "tshirt",
+      "productName": "Men Tshirt",
+      "price": "Rs. 400",
+      "quantity": 1
+    }
+  ],
+  "invalidSearches": [
+    {
+      "id": "nonexistent-product",
+      "searchTerm": "qwerty-neexistujuci-produkt-98765"
+    }
+  ]
+}
