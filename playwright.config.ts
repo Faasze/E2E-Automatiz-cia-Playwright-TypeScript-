@@ -13,11 +13,18 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
 
-  reporter: [
-    ['list'],
-    ['html', { outputFolder: 'playwright-report', open: 'never' }],
-    ['junit', { outputFile: 'test-results/junit.xml' }],
-  ],
+  // v CI každý job uloží blob report a na konci sa zlúčia do jedného HTML reportu
+  reporter: isCI
+    ? [
+        ['list'],
+        ['blob', { fileName: `report-${process.env.PW_PROJECT ?? 'all'}.zip` }],
+        ['junit', { outputFile: 'test-results/junit.xml' }],
+      ]
+    : [
+        ['list'],
+        ['html', { outputFolder: 'playwright-report', open: 'never' }],
+        ['junit', { outputFile: 'test-results/junit.xml' }],
+      ],
 
   use: {
     // iné prostredie sa dá nastaviť cez BASE_URL

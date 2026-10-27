@@ -52,14 +52,16 @@ jobs:
 
       - name: Run tests
         run: npx playwright test --project=${{ matrix.project }}
+        env:
+          PW_PROJECT: ${{ matrix.project }}
 
-      - name: Upload HTML report
+      - name: Upload blob report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.project }}
-          path: playwright-report/
-          retention-days: 14
+          name: blob-report-${{ matrix.project }}
+          path: blob-report/
+          retention-days: 1
 
       - name: Upload traces, screenshots, videos (failures only)
         if: ${{ failure() }}
@@ -78,10 +80,42 @@ jobs:
           path: test-results/junit.xml
           reporter: java-junit
 
-  # report z chromia na GitHub Pages (Settings -> Pages -> Source: GitHub Actions)
+  # zlúči reporty zo všetkých platforiem do jedného HTML reportu
+  merge-reports:
+    name: Merge HTML report
+    needs: test
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: all-blob-reports
+          merge-multiple: true
+
+      - name: Merge into HTML report
+        run: npx playwright merge-reports --reporter html ./all-blob-reports
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  # zlúčený report na GitHub Pages (Settings -> Pages -> Source: GitHub Actions)
   publish-report:
     name: Publish report to GitHub Pages
-    needs: test
+    needs: merge-reports
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     continue-on-error: true # ak Pages nie sú zapnuté, nech to nezhodí celý beh
     runs-on: ubuntu-latest
@@ -94,7 +128,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: playwright-report-chromium
+          name: playwright-report
           path: report
       - uses: actions/upload-pages-artifact@v3
         with:
